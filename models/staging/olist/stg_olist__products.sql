@@ -1,0 +1,1 @@
+select * from {{ source("olist", "OLIST_PRODUCTS_DATASET")}}
