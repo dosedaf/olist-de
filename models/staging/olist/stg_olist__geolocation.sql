@@ -1,4 +1,3 @@
-
 with source as (
     select * from {{ source("olist", "OLIST_GEOLOCATION_DATASET")}}
 ),
@@ -10,7 +9,6 @@ renamed as (
         geolocation_lng as longitude,
         geolocation_city as city,
         geolocation_state as state,
-        
     from 
         source
 )
