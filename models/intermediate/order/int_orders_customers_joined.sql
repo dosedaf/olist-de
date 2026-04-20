@@ -1,5 +1,5 @@
 with order_items as (
-    select * from {{ ref('int_order_items_aggregated') }}
+    select * from {{ ref('int_order_items_order_aggregated') }}
 ),
 
 orders as (
