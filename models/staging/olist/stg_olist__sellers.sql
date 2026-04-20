@@ -1,4 +1,3 @@
-
 with source as (
     select * from {{ source("olist", "OLIST_SELLERS_DATASET")}}
 ),
