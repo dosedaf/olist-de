@@ -1,3 +1,5 @@
+{{ config(enabled=false) }}
+
 with orders as (
     select * from {{ ref("stg_olist__orders") }}
 ),
