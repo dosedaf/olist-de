@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>dbt docs — olist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #161920;
+    --bg3: #1e2229;
+    --bg4: #252930;
+    --border: #2e333d;
+    --border2: #3a4050;
+    --text: #e2e6f0;
+    --text2: #8b92a8;
+    --text3: #555e73;
+    --accent: #4f9cf9;
+    --accent-dim: #1a2d4a;
+    --green: #3ecf8e;
+    --green-dim: #0e2e20;
+    --amber: #f59e0b;
+    --amber-dim: #2d1f05;
+    --purple: #a78bfa;
+    --purple-dim: #1e1535;
+    --coral: #f87171;
+    --coral-dim: #2d1010;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Layout ── */
+  .layout { display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── Topbar ── */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 48px; z-index: 100;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 20px; gap: 16px;
+  }
+  .topbar-logo {
+    font-family: var(--mono); font-size: 13px; font-weight: 500;
+    color: var(--text); display: flex; align-items: center; gap: 8px;
+  }
+  .topbar-logo .dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; }
+  .topbar-project {
+    font-family: var(--mono); font-size: 12px; color: var(--text2);
+    border-left: 1px solid var(--border); padding-left: 16px;
+  }
+  .topbar-stats {
+    margin-left: auto; display: flex; gap: 20px;
+  }
+  .topbar-stat { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+  .topbar-stat span { color: var(--text2); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 280px; min-width: 280px;
+    margin-top: 48px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-search {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-search input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .sidebar-search input::placeholder { color: var(--text3); }
+  .sidebar-search input:focus { border-color: var(--accent); }
+  .sidebar-tree { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+  .sidebar-tree::-webkit-scrollbar { width: 4px; }
+  .sidebar-tree::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-tree::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .schema-group { margin-bottom: 2px; }
+  .schema-label {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 10px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text3);
+    transition: color .1s;
+  }
+  .schema-label:hover { color: var(--text2); }
+  .schema-label .caret { font-size: 8px; transition: transform .15s; }
+  .schema-label.open .caret { transform: rotate(90deg); }
+  .schema-label .schema-badge {
+    font-size: 9px; padding: 2px 6px; border-radius: 3px;
+    font-weight: 500; letter-spacing: .05em;
+  }
+  .schema-label .count { margin-left: auto; font-size: 10px; }
+
+  .node-list { display: none; }
+  .node-list.open { display: block; }
+
+  .node-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px 6px 24px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: background .1s;
+  }
+  .node-item:hover { background: var(--bg3); }
+  .node-item.active {
+    background: var(--accent-dim);
+    border-left-color: var(--accent);
+  }
+  .node-name {
+    font-family: var(--mono); font-size: 11.5px; color: var(--text2);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 1;
+  }
+  .node-item.active .node-name { color: var(--text); }
+  .kind-badge {
+    font-size: 9px; font-weight: 500; padding: 2px 5px; border-radius: 3px;
+    flex-shrink: 0; font-family: var(--mono); letter-spacing: .03em;
+  }
+
+  /* schema colors */
+  .s-raw    { background: var(--amber-dim); color: var(--amber); }
+  .s-staging   { background: var(--purple-dim); color: var(--purple); }
+  .s-intermediate { background: var(--coral-dim); color: var(--coral); }
+  .s-marts  { background: var(--green-dim); color: var(--green); }
+
+  .t-table { background: var(--green-dim); color: var(--green); }
+  .t-view  { background: var(--accent-dim); color: var(--accent); }
+
+  /* ── Main ── */
+  .main {
+    flex: 1; margin-top: 48px;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+  .main::-webkit-scrollbar { width: 6px; }
+  .main::-webkit-scrollbar-track { background: transparent; }
+  .main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  .main-inner { padding: 32px 40px; max-width: 900px; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: calc(100vh - 48px);
+    color: var(--text3); font-family: var(--mono); font-size: 13px; gap: 12px;
+  }
+  .empty-state .big { font-size: 32px; }
+
+  /* ── Detail ── */
+  .detail-header { margin-bottom: 28px; }
+  .detail-path {
+    font-family: var(--mono); font-size: 11px; color: var(--text3);
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .detail-path span { color: var(--text2); }
+  .detail-name {
+    font-size: 22px; font-weight: 500; color: var(--text);
+    font-family: var(--mono); margin-bottom: 8px;
+  }
+  .detail-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .meta-pill {
+    font-size: 11px; padding: 3px 9px; border-radius: 4px;
+    font-family: var(--mono); font-weight: 500;
+  }
+
+  /* ── Stats grid ── */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px; margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .stat-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; font-family: var(--mono); letter-spacing: .04em; }
+  .stat-val { font-size: 20px; font-weight: 500; color: var(--text); font-family: var(--mono); }
+  .stat-val.sm { font-size: 14px; }
+
+  /* ── Section ── */
+  .section { margin-bottom: 32px; }
+  .section-title {
+    font-size: 10px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text3); margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+  }
+
+  /* ── Columns table ── */
+  .col-table { width: 100%; border-collapse: collapse; }
+  .col-table th {
+    text-align: left; padding: 8px 12px;
+    font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text3); font-family: var(--mono);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .col-table th:first-child { border-radius: 6px 0 0 0; width: 40px; }
+  .col-table th:last-child { border-radius: 0 6px 0 0; }
+  .col-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text);
+  }
+  .col-table tr:last-child td { border-bottom: none; }
+  .col-table tbody tr { transition: background .1s; }
+  .col-table tbody tr:hover td { background: var(--bg2); }
+  .col-idx { color: var(--text3); font-size: 11px; }
+  .col-type {
+    display: inline-block; font-size: 10px; padding: 2px 7px;
+    border-radius: 4px; background: var(--bg4); color: var(--text2);
+    font-family: var(--mono);
+  }
+  .col-pk { color: var(--amber); font-size: 10px; }
+  .table-wrap {
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+
+  /* ── Lineage panel ── */
+  .lineage-box {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px 20px; font-family: var(--mono); font-size: 12px;
+    display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap;
+  }
+  .lineage-col h4 { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; }
+  .lineage-node {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--text2); margin-bottom: 6px; cursor: pointer;
+    transition: color .1s;
+  }
+  .lineage-node:hover { color: var(--accent); }
+  .lineage-node .arrow { color: var(--text3); }
+
+  /* ── Scrollbar ── */
+  * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="dot"></div>
+    dbt docs
+  </div>
+  <div class="topbar-project">olist · snowflake</div>
+  <div class="topbar-stats">
+    <div class="topbar-stat">models <span>27</span></div>
+    <div class="topbar-stat">seeds <span>9</span></div>
+    <div class="topbar-stat">sources <span>8</span></div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-search">
+      <input type="text" id="search" placeholder="search nodes..." oninput="filterNodes(this.value)"/>
+    </div>
+    <div class="sidebar-tree" id="tree"></div>
+  </div>
+  <div class="main">
+    <div class="main-inner" id="detail">
+      <div class="empty-state">
+        <div class="big">⬡</div>
+        <div>select a node to inspect</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const catalog = {
+  "model.olist.customers":{"type":"BASE TABLE","schema":"MARTS","name":"CUSTOMERS","kind":"model","rows":99441,"bytes":7721984,"modified":"2026-04-21 03:04 UTC","cols":[{n:"CUSTOMER_ID",t:"TEXT",i:1},{n:"CUSTOMER_UNIQUE_ID",t:"TEXT",i:2},{n:"ZIP_CODE",t:"NUMBER",i:3},{n:"LATITUDE",t:"FLOAT",i:4},{n:"LONGITUDE",t:"FLOAT",i:5},{n:"CITY",t:"TEXT",i:6},{n:"STATE",t:"TEXT",i:7}]},
+  "model.olist.customers_lifetime_value":{"type":"BASE TABLE","schema":"MARTS","name":"CUSTOMERS_LIFETIME_VALUE","kind":"model","rows":95420,"bytes":3598336,"modified":"2026-04-21 03:04 UTC","cols":[{n:"CUSTOMER_UNIQUE_ID",t:"TEXT",i:1},{n:"TOTAL_ORDERS",t:"NUMBER",i:2},{n:"TOTAL_PURCHASE",t:"FLOAT",i:3},{n:"TOTAL_FREIGHT",t:"FLOAT",i:4}]},
+  "model.olist.geolocation":{"type":"BASE TABLE","schema":"MARTS","name":"GEOLOCATION","kind":"model","rows":19015,"bytes":475648,"modified":"2026-04-21 03:04 UTC","cols":[{n:"ZIP_CODE",t:"NUMBER",i:1},{n:"LATITUDE",t:"FLOAT",i:2},{n:"LONGITUDE",t:"FLOAT",i:3},{n:"CITY",t:"TEXT",i:4},{n:"STATE",t:"TEXT",i:5}]},
+  "model.olist.order_items":{"type":"BASE TABLE","schema":"MARTS","name":"ORDER_ITEMS","kind":"model","rows":112650,"bytes":8502272,"modified":"2026-04-21 03:04 UTC","cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"ORDER_ITEM_ID",t:"NUMBER",i:2},{n:"PRODUCT_ID",t:"TEXT",i:3},{n:"SELLER_ID",t:"TEXT",i:4},{n:"SHIPPING_LIMIT_DATE",t:"TIMESTAMP_NTZ",i:5},{n:"PRICE",t:"FLOAT",i:6},{n:"FREIGHT_VALUE",t:"FLOAT",i:7}]},
+  "model.olist.order_payments":{"type":"BASE TABLE","schema":"MARTS","name":"ORDER_PAYMENTS","kind":"model","rows":103886,"bytes":3946496,"modified":"2026-04-21 03:04 UTC","cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"PAYMENT_SEQUENTIAL",t:"NUMBER",i:2},{n:"PAYMENT_TYPE",t:"TEXT",i:3},{n:"PAYMENT_INSTALLMENTS",t:"NUMBER",i:4},{n:"PAYMENT_VALUE",t:"FLOAT",i:5}]},
+  "model.olist.orders":{"type":"BASE TABLE","schema":"MARTS","name":"ORDERS","kind":"model","rows":99441,"bytes":8493056,"modified":"2026-04-21 03:04 UTC","cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"CUSTOMER_ID",t:"TEXT",i:2},{n:"ORDER_STATUS",t:"TEXT",i:3},{n:"ORDER_PURCHASE_TIMESTAMP",t:"TIMESTAMP_NTZ",i:4},{n:"ORDER_APPROVED_AT",t:"TIMESTAMP_NTZ",i:5},{n:"ORDER_DELIVERED_CARRIER_DATE",t:"TIMESTAMP_NTZ",i:6},{n:"ORDER_DELIVERED_CUSTOMER_DATE",t:"TIMESTAMP_NTZ",i:7},{n:"ORDER_ESTIMATED_DELIVERY_DATE",t:"TIMESTAMP_NTZ",i:8}]},
+  "model.olist.payments":{"type":"BASE TABLE","schema":"MARTS","name":"PAYMENTS","kind":"model","rows":5,"bytes":3072,"modified":"2026-04-21 03:04 UTC","cols":[{n:"PAYMENT_TYPE",t:"TEXT",i:1},{n:"TOTAL_PAYMENT",t:"NUMBER",i:2},{n:"TOTAL_VALUE",t:"FLOAT",i:3}]},
+  "model.olist.products":{"type":"BASE TABLE","schema":"MARTS","name":"PRODUCTS","kind":"model","rows":32328,"bytes":1341440,"modified":"2026-04-21 03:04 UTC","cols":[{n:"PRODUCT_ID",t:"TEXT",i:1},{n:"CATEGORY",t:"TEXT",i:2},{n:"NAME_LENGTH",t:"NUMBER",i:3},{n:"DESCRIPTION_LENGTH",t:"NUMBER",i:4},{n:"PHOTOS_QTY",t:"NUMBER",i:5},{n:"WEIGHT_G",t:"NUMBER",i:6},{n:"LENGTH_CM",t:"NUMBER",i:7},{n:"HEIGHT_CM",t:"NUMBER",i:8},{n:"WIDTH_CM",t:"NUMBER",i:9}]},
+  "model.olist.products_revenue":{"type":"BASE TABLE","schema":"MARTS","name":"PRODUCTS_REVENUE","kind":"model","rows":32951,"bytes":1407488,"modified":"2026-04-21 03:04 UTC","cols":[{n:"PRODUCT_ID",t:"TEXT",i:1},{n:"TOTAL_ORDER",t:"NUMBER",i:2},{n:"TOTAL_PRICE",t:"FLOAT",i:3},{n:"TOTAL_FREIGHT",t:"FLOAT",i:4}]},
+  "model.olist.sellers":{"type":"BASE TABLE","schema":"MARTS","name":"SELLERS","kind":"model","rows":3095,"bytes":174080,"modified":"2026-04-21 03:04 UTC","cols":[{n:"SELLER_ID",t:"TEXT",i:1},{n:"ZIP_CODE",t:"NUMBER",i:2},{n:"LATITUDE",t:"FLOAT",i:3},{n:"LONGITUDE",t:"FLOAT",i:4},{n:"CITY",t:"TEXT",i:5},{n:"STATE",t:"TEXT",i:6}]},
+  "model.olist.sellers_total_revenue":{"type":"BASE TABLE","schema":"MARTS","name":"SELLERS_TOTAL_REVENUE","kind":"model","rows":3095,"bytes":181760,"modified":"2026-04-21 03:04 UTC","cols":[{n:"SELLER_ID",t:"TEXT",i:1},{n:"TOTAL_ORDERS",t:"NUMBER",i:2},{n:"DISTINCT_PRODUCTS",t:"NUMBER",i:3},{n:"TOTAL_REVENUE",t:"FLOAT",i:4},{n:"TOTAL_FREIGHT",t:"FLOAT",i:5},{n:"AVG_ORDER_VALUE",t:"FLOAT",i:6}]},
+  "model.olist.int_customers_geolocation_joined":{"type":"VIEW","schema":"INTERMEDIATE","name":"INT_CUSTOMERS_GEOLOCATION_JOINED","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"CUSTOMER_ID",t:"TEXT",i:1},{n:"CUSTOMER_UNIQUE_ID",t:"TEXT",i:2},{n:"ZIP_CODE",t:"NUMBER",i:3},{n:"LATITUDE",t:"FLOAT",i:4},{n:"LONGITUDE",t:"FLOAT",i:5},{n:"CITY",t:"TEXT",i:6},{n:"STATE",t:"TEXT",i:7}]},
+  "model.olist.int_order_items_order_aggregated":{"type":"VIEW","schema":"INTERMEDIATE","name":"INT_ORDER_ITEMS_ORDER_AGGREGATED","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"TOTAL_ITEMS",t:"NUMBER",i:2},{n:"DISTINCT_PRODUCTS",t:"NUMBER",i:3},{n:"TOTAL_PRICE",t:"FLOAT",i:4},{n:"TOTAL_FREIGHT",t:"FLOAT",i:5}]},
+  "model.olist.int_order_items_product_aggregated":{"type":"VIEW","schema":"INTERMEDIATE","name":"INT_ORDER_ITEMS_PRODUCT_AGGREGATED","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"PRODUCT_ID",t:"TEXT",i:1},{n:"TOTAL_ORDER",t:"NUMBER",i:2},{n:"TOTAL_PRICE",t:"FLOAT",i:3},{n:"TOTAL_FREIGHT",t:"FLOAT",i:4}]},
+  "model.olist.int_order_items_seller_aggregated":{"type":"VIEW","schema":"INTERMEDIATE","name":"INT_ORDER_ITEMS_SELLER_AGGREGATED","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"SELLER_ID",t:"TEXT",i:1},{n:"TOTAL_ORDERS",t:"NUMBER",i:2},{n:"DISTINCT_PRODUCTS",t:"NUMBER",i:3},{n:"TOTAL_REVENUE",t:"FLOAT",i:4},{n:"TOTAL_FREIGHT",t:"FLOAT",i:5},{n:"AVG_ORDER_VALUE",t:"FLOAT",i:6}]},
+  "model.olist.int_orders_customers_joined":{"type":"VIEW","schema":"INTERMEDIATE","name":"INT_ORDERS_CUSTOMERS_JOINED","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"CUSTOMER_ID",t:"TEXT",i:2},{n:"CUSTOMER_UNIQUE_ID",t:"TEXT",i:3},{n:"ORDER_STATUS",t:"TEXT",i:4},{n:"ORDER_PURCHASE_TIMESTAMP",t:"TIMESTAMP_NTZ",i:5},{n:"TOTAL_PRICE",t:"FLOAT",i:6},{n:"TOTAL_FREIGHT",t:"FLOAT",i:7}]},
+  "model.olist.int_payments_aggregated":{"type":"VIEW","schema":"INTERMEDIATE","name":"INT_PAYMENTS_AGGREGATED","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"PAYMENT_TYPE",t:"TEXT",i:1},{n:"TOTAL_PAYMENT",t:"NUMBER",i:2},{n:"TOTAL_VALUE",t:"FLOAT",i:3}]},
+  "model.olist.int_products_product_category_english_joined":{"type":"VIEW","schema":"INTERMEDIATE","name":"INT_PRODUCTS_PRODUCT_CATEGORY_ENGLISH_JOINED","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"PRODUCT_ID",t:"TEXT",i:1},{n:"CATEGORY",t:"TEXT",i:2},{n:"NAME_LENGTH",t:"NUMBER",i:3},{n:"DESCRIPTION_LENGTH",t:"NUMBER",i:4},{n:"PHOTOS_QTY",t:"NUMBER",i:5},{n:"WEIGHT_G",t:"NUMBER",i:6},{n:"LENGTH_CM",t:"NUMBER",i:7},{n:"HEIGHT_CM",t:"NUMBER",i:8},{n:"WIDTH_CM",t:"NUMBER",i:9}]},
+  "model.olist.int_sellers_geolocation_joined":{"type":"VIEW","schema":"INTERMEDIATE","name":"INT_SELLERS_GEOLOCATION_JOINED","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"SELLER_ID",t:"TEXT",i:1},{n:"ZIP_CODE",t:"NUMBER",i:2},{n:"LATITUDE",t:"FLOAT",i:3},{n:"LONGITUDE",t:"FLOAT",i:4},{n:"CITY",t:"TEXT",i:5},{n:"STATE",t:"TEXT",i:6}]},
+  "model.olist.stg_olist__customers":{"type":"VIEW","schema":"STAGING","name":"STG_OLIST__CUSTOMERS","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"CUSTOMER_ID",t:"TEXT",i:1},{n:"CUSTOMER_UNIQUE_ID",t:"TEXT",i:2},{n:"ZIP_CODE",t:"NUMBER",i:3},{n:"CITY",t:"TEXT",i:4},{n:"STATE",t:"TEXT",i:5}]},
+  "model.olist.stg_olist__geolocation":{"type":"VIEW","schema":"STAGING","name":"STG_OLIST__GEOLOCATION","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"ZIP_CODE",t:"NUMBER",i:1},{n:"LATITUDE",t:"FLOAT",i:2},{n:"LONGITUDE",t:"FLOAT",i:3},{n:"CITY",t:"TEXT",i:4},{n:"STATE",t:"TEXT",i:5}]},
+  "model.olist.stg_olist__order_items":{"type":"VIEW","schema":"STAGING","name":"STG_OLIST__ORDER_ITEMS","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"ORDER_ITEM_ID",t:"NUMBER",i:2},{n:"PRODUCT_ID",t:"TEXT",i:3},{n:"SELLER_ID",t:"TEXT",i:4},{n:"SHIPPING_LIMIT_DATE",t:"TIMESTAMP_NTZ",i:5},{n:"PRICE",t:"FLOAT",i:6},{n:"FREIGHT_VALUE",t:"FLOAT",i:7}]},
+  "model.olist.stg_olist__order_payments":{"type":"VIEW","schema":"STAGING","name":"STG_OLIST__ORDER_PAYMENTS","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"PAYMENT_SEQUENTIAL",t:"NUMBER",i:2},{n:"PAYMENT_TYPE",t:"TEXT",i:3},{n:"PAYMENT_INSTALLMENTS",t:"NUMBER",i:4},{n:"PAYMENT_VALUE",t:"FLOAT",i:5}]},
+  "model.olist.stg_olist__orders":{"type":"VIEW","schema":"STAGING","name":"STG_OLIST__ORDERS","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"CUSTOMER_ID",t:"TEXT",i:2},{n:"ORDER_STATUS",t:"TEXT",i:3},{n:"ORDER_PURCHASE_TIMESTAMP",t:"TIMESTAMP_NTZ",i:4},{n:"ORDER_APPROVED_AT",t:"TIMESTAMP_NTZ",i:5},{n:"ORDER_DELIVERED_CARRIER_DATE",t:"TIMESTAMP_NTZ",i:6},{n:"ORDER_DELIVERED_CUSTOMER_DATE",t:"TIMESTAMP_NTZ",i:7},{n:"ORDER_ESTIMATED_DELIVERY_DATE",t:"TIMESTAMP_NTZ",i:8}]},
+  "model.olist.stg_olist__product_category_english":{"type":"VIEW","schema":"STAGING","name":"STG_OLIST__PRODUCT_CATEGORY_ENGLISH","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"PRODUCT_CATEGORY_NAME",t:"TEXT",i:1},{n:"PRODUCT_CATEGORY_NAME_ENGLISH",t:"TEXT",i:2}]},
+  "model.olist.stg_olist__products":{"type":"VIEW","schema":"STAGING","name":"STG_OLIST__PRODUCTS","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"PRODUCT_ID",t:"TEXT",i:1},{n:"CATEGORY",t:"TEXT",i:2},{n:"NAME_LENGTH",t:"NUMBER",i:3},{n:"DESCRIPTION_LENGTH",t:"NUMBER",i:4},{n:"PHOTOS_QTY",t:"NUMBER",i:5},{n:"WEIGHT_G",t:"NUMBER",i:6},{n:"LENGTH_CM",t:"NUMBER",i:7},{n:"HEIGHT_CM",t:"NUMBER",i:8},{n:"WIDTH_CM",t:"NUMBER",i:9}]},
+  "model.olist.stg_olist__sellers":{"type":"VIEW","schema":"STAGING","name":"STG_OLIST__SELLERS","kind":"model","rows":null,"bytes":null,"modified":null,"cols":[{n:"SELLER_ID",t:"TEXT",i:1},{n:"ZIP_CODE",t:"NUMBER",i:2},{n:"CITY",t:"TEXT",i:3},{n:"STATE",t:"TEXT",i:4}]},
+  "seed.olist.olist_customers_dataset":{"type":"BASE TABLE","schema":"RAW","name":"OLIST_CUSTOMERS_DATASET","kind":"seed","rows":99441,"bytes":6759424,"modified":"2026-04-21 03:04 UTC","cols":[{n:"CUSTOMER_ID",t:"TEXT",i:1},{n:"CUSTOMER_UNIQUE_ID",t:"TEXT",i:2},{n:"CUSTOMER_ZIP_CODE_PREFIX",t:"NUMBER",i:3},{n:"CUSTOMER_CITY",t:"TEXT",i:4},{n:"CUSTOMER_STATE",t:"TEXT",i:5}]},
+  "seed.olist.olist_geolocation_dataset":{"type":"BASE TABLE","schema":"RAW","name":"OLIST_GEOLOCATION_DATASET","kind":"seed","rows":1000163,"bytes":18706944,"modified":"2026-04-21 03:10 UTC","cols":[{n:"GEOLOCATION_ZIP_CODE_PREFIX",t:"NUMBER",i:1},{n:"GEOLOCATION_LAT",t:"FLOAT",i:2},{n:"GEOLOCATION_LNG",t:"FLOAT",i:3},{n:"GEOLOCATION_CITY",t:"TEXT",i:4},{n:"GEOLOCATION_STATE",t:"TEXT",i:5}]},
+  "seed.olist.olist_order_items_dataset":{"type":"BASE TABLE","schema":"RAW","name":"OLIST_ORDER_ITEMS_DATASET","kind":"seed","rows":112650,"bytes":8534016,"modified":"2026-04-21 03:05 UTC","cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"ORDER_ITEM_ID",t:"NUMBER",i:2},{n:"PRODUCT_ID",t:"TEXT",i:3},{n:"SELLER_ID",t:"TEXT",i:4},{n:"SHIPPING_LIMIT_DATE",t:"TIMESTAMP_NTZ",i:5},{n:"PRICE",t:"FLOAT",i:6},{n:"FREIGHT_VALUE",t:"FLOAT",i:7}]},
+  "seed.olist.olist_order_payments_dataset":{"type":"BASE TABLE","schema":"RAW","name":"OLIST_ORDER_PAYMENTS_DATASET","kind":"seed","rows":103886,"bytes":3946496,"modified":"2026-04-21 03:04 UTC","cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"PAYMENT_SEQUENTIAL",t:"NUMBER",i:2},{n:"PAYMENT_TYPE",t:"TEXT",i:3},{n:"PAYMENT_INSTALLMENTS",t:"NUMBER",i:4},{n:"PAYMENT_VALUE",t:"FLOAT",i:5}]},
+  "seed.olist.olist_order_reviews_dataset":{"type":"BASE TABLE","schema":"RAW","name":"OLIST_ORDER_REVIEWS_DATASET","kind":"seed","rows":0,"bytes":0,"modified":"2026-04-21 03:04 UTC","cols":[{n:"REVIEW_ID",t:"TEXT",i:1},{n:"ORDER_ID",t:"TEXT",i:2},{n:"REVIEW_SCORE",t:"NUMBER",i:3},{n:"REVIEW_COMMENT_TITLE",t:"TEXT",i:4},{n:"REVIEW_COMMENT_MESSAGE",t:"TEXT",i:5},{n:"REVIEW_CREATION_DATE",t:"TIMESTAMP_NTZ",i:6},{n:"REVIEW_ANSWER_TIMESTAMP",t:"TIMESTAMP_NTZ",i:7}]},
+  "seed.olist.olist_orders_dataset":{"type":"BASE TABLE","schema":"RAW","name":"OLIST_ORDERS_DATASET","kind":"seed","rows":99441,"bytes":8496640,"modified":"2026-04-21 03:08 UTC","cols":[{n:"ORDER_ID",t:"TEXT",i:1},{n:"CUSTOMER_ID",t:"TEXT",i:2},{n:"ORDER_STATUS",t:"TEXT",i:3},{n:"ORDER_PURCHASE_TIMESTAMP",t:"TIMESTAMP_NTZ",i:4},{n:"ORDER_APPROVED_AT",t:"TIMESTAMP_NTZ",i:5},{n:"ORDER_DELIVERED_CARRIER_DATE",t:"TIMESTAMP_NTZ",i:6},{n:"ORDER_DELIVERED_CUSTOMER_DATE",t:"TIMESTAMP_NTZ",i:7},{n:"ORDER_ESTIMATED_DELIVERY_DATE",t:"TIMESTAMP_NTZ",i:8}]},
+  "seed.olist.olist_products_dataset":{"type":"BASE TABLE","schema":"RAW","name":"OLIST_PRODUCTS_DATASET","kind":"seed","rows":32951,"bytes":1384960,"modified":"2026-04-21 03:04 UTC","cols":[{n:"PRODUCT_ID",t:"TEXT",i:1},{n:"PRODUCT_CATEGORY_NAME",t:"TEXT",i:2},{n:"PRODUCT_NAME_LENGHT",t:"NUMBER",i:3},{n:"PRODUCT_DESCRIPTION_LENGHT",t:"NUMBER",i:4},{n:"PRODUCT_PHOTOS_QTY",t:"NUMBER",i:5},{n:"PRODUCT_WEIGHT_G",t:"NUMBER",i:6},{n:"PRODUCT_LENGTH_CM",t:"NUMBER",i:7},{n:"PRODUCT_HEIGHT_CM",t:"NUMBER",i:8},{n:"PRODUCT_WIDTH_CM",t:"NUMBER",i:9}]},
+  "seed.olist.olist_sellers_dataset":{"type":"BASE TABLE","schema":"RAW","name":"OLIST_SELLERS_DATASET","kind":"seed","rows":3095,"bytes":117760,"modified":"2026-04-21 03:04 UTC","cols":[{n:"SELLER_ID",t:"TEXT",i:1},{n:"SELLER_ZIP_CODE_PREFIX",t:"NUMBER",i:2},{n:"SELLER_CITY",t:"TEXT",i:3},{n:"SELLER_STATE",t:"TEXT",i:4}]},
+  "seed.olist.product_category_name_translation":{"type":"BASE TABLE","schema":"RAW","name":"PRODUCT_CATEGORY_NAME_TRANSLATION","kind":"seed","rows":71,"bytes":2560,"modified":"2026-04-21 03:04 UTC","cols":[{n:"PRODUCT_CATEGORY_NAME",t:"TEXT",i:1},{n:"PRODUCT_CATEGORY_NAME_ENGLISH",t:"TEXT",i:2}]}
+};
+
+// Simple lineage map
+const upstream = {
+  "model.olist.customers": ["model.olist.stg_olist__customers","model.olist.stg_olist__geolocation"],
+  "model.olist.customers_lifetime_value": ["model.olist.int_orders_customers_joined"],
+  "model.olist.order_items": ["model.olist.stg_olist__order_items"],
+  "model.olist.order_payments": ["model.olist.stg_olist__order_payments"],
+  "model.olist.orders": ["model.olist.stg_olist__orders"],
+  "model.olist.payments": ["model.olist.int_payments_aggregated"],
+  "model.olist.products": ["model.olist.int_products_product_category_english_joined"],
+  "model.olist.products_revenue": ["model.olist.int_order_items_product_aggregated"],
+  "model.olist.sellers": ["model.olist.int_sellers_geolocation_joined"],
+  "model.olist.sellers_total_revenue": ["model.olist.int_order_items_seller_aggregated"],
+  "model.olist.geolocation": ["model.olist.stg_olist__geolocation"],
+  "model.olist.int_customers_geolocation_joined": ["model.olist.stg_olist__customers","model.olist.stg_olist__geolocation"],
+  "model.olist.int_order_items_order_aggregated": ["model.olist.stg_olist__order_items"],
+  "model.olist.int_order_items_product_aggregated": ["model.olist.stg_olist__order_items"],
+  "model.olist.int_order_items_seller_aggregated": ["model.olist.stg_olist__order_items"],
+  "model.olist.int_orders_customers_joined": ["model.olist.stg_olist__orders","model.olist.stg_olist__customers","model.olist.int_order_items_order_aggregated"],
+  "model.olist.int_payments_aggregated": ["model.olist.stg_olist__order_payments"],
+  "model.olist.int_products_product_category_english_joined": ["model.olist.stg_olist__products","model.olist.stg_olist__product_category_english"],
+  "model.olist.int_sellers_geolocation_joined": ["model.olist.stg_olist__sellers","model.olist.stg_olist__geolocation"],
+  "model.olist.stg_olist__customers": ["seed.olist.olist_customers_dataset"],
+  "model.olist.stg_olist__geolocation": ["seed.olist.olist_geolocation_dataset"],
+  "model.olist.stg_olist__order_items": ["seed.olist.olist_order_items_dataset"],
+  "model.olist.stg_olist__order_payments": ["seed.olist.olist_order_payments_dataset"],
+  "model.olist.stg_olist__orders": ["seed.olist.olist_orders_dataset"],
+  "model.olist.stg_olist__product_category_english": ["seed.olist.product_category_name_translation"],
+  "model.olist.stg_olist__products": ["seed.olist.olist_products_dataset"],
+  "model.olist.stg_olist__sellers": ["seed.olist.olist_sellers_dataset"],
+};
+
+const schemaOrder = ['RAW','STAGING','INTERMEDIATE','MARTS'];
+const schemaClass = {RAW:'s-raw',STAGING:'s-staging',INTERMEDIATE:'s-intermediate',MARTS:'s-marts'};
+let activeKey = null;
+let openSchemas = new Set(['MARTS']);
+
+function fmtBytes(b) {
+  if (b === null || b === undefined) return '—';
+  if (b === 0) return '0 B';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return Math.round(b/1024) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+function fmtRows(r) {
+  if (r === null || r === undefined) return '—';
+  return r.toLocaleString();
+}
+
+function buildTree(filter = '') {
+  const grouped = {};
+  for (const [k, v] of Object.entries(catalog)) {
+    if (filter && !v.name.toLowerCase().includes(filter.toLowerCase())) continue;
+    if (!grouped[v.schema]) grouped[v.schema] = [];
+    grouped[v.schema].push({key: k, ...v});
+  }
+  const tree = document.getElementById('tree');
+  tree.innerHTML = '';
+  for (const schema of schemaOrder) {
+    const nodes = grouped[schema];
+    if (!nodes || !nodes.length) continue;
+    const isOpen = openSchemas.has(schema) || !!filter;
+    const grp = document.createElement('div');
+    grp.className = 'schema-group';
+    const lbl = document.createElement('div');
+    lbl.className = 'schema-label' + (isOpen ? ' open' : '');
+    lbl.innerHTML = `<span class="caret">▶</span><span class="schema-badge ${schemaClass[schema]}">${schema}</span><span class="count">${nodes.length}</span>`;
+    lbl.onclick = () => {
+      if (openSchemas.has(schema)) openSchemas.delete(schema);
+      else openSchemas.add(schema);
+      lbl.classList.toggle('open');
+      list.classList.toggle('open');
+    };
+    const list = document.createElement('div');
+    list.className = 'node-list' + (isOpen ? ' open' : '');
+    nodes.sort((a, b) => a.name.localeCompare(b.name));
+    for (const n of nodes) {
+      const item = document.createElement('div');
+      item.className = 'node-item' + (activeKey === n.key ? ' active' : '');
+      item.dataset.key = n.key;
+      const tClass = n.type === 'VIEW' ? 't-view' : 't-table';
+      const tLabel = n.type === 'VIEW' ? 'view' : 'table';
+      item.innerHTML = `<span class="kind-badge ${tClass}">${tLabel}</span><span class="node-name">${n.name.toLowerCase()}</span>`;
+      item.onclick = () => showDetail(n.key);
+      list.appendChild(item);
+    }
+    grp.appendChild(lbl);
+    grp.appendChild(list);
+    tree.appendChild(grp);
+  }
+}
+
+function filterNodes(val) { buildTree(val); }
+
+function showDetail(key) {
+  activeKey = key;
+  document.querySelectorAll('.node-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.key === key);
+  });
+  const n = catalog[key];
+  const sc = schemaClass[n.schema];
+
+  let statsHTML = '';
+  if (n.rows !== null) {
+    statsHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">rows</div><div class="stat-val">${fmtRows(n.rows)}</div></div>
+        <div class="stat-card"><div class="stat-label">size</div><div class="stat-val">${fmtBytes(n.bytes)}</div></div>
+        <div class="stat-card"><div class="stat-label">columns</div><div class="stat-val">${n.cols.length}</div></div>
+        <div class="stat-card"><div class="stat-label">last modified</div><div class="stat-val sm">${n.modified || '—'}</div></div>
+      </div>`;
+  } else {
+    statsHTML = `<div class="stats-grid"><div class="stat-card"><div class="stat-label">columns</div><div class="stat-val">${n.cols.length}</div></div><div class="stat-card"><div class="stat-label">materialization</div><div class="stat-val sm">view</div></div></div>`;
+  }
+
+  const colRows = n.cols.map(c => {
+    const isId = c.n.endsWith('_ID');
+    return `<tr>
+      <td class="col-idx">${c.i}</td>
+      <td>${c.n.toLowerCase()}${isId ? ' <span class="col-pk">key</span>' : ''}</td>
+      <td><span class="col-type">${c.t}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Lineage
+  const ups = (upstream[key] || []);
+  // find downstream
+  const downs = Object.entries(upstream).filter(([k, arr]) => arr.includes(key)).map(([k]) => k);
+
+  let lineageHTML = '';
+  if (ups.length || downs.length) {
+    const upNodes = ups.map(k => {
+      const nn = catalog[k];
+      if (!nn) return '';
+      return `<div class="lineage-node" onclick="showDetail('${k}')"><span class="arrow">←</span> ${nn.name.toLowerCase()}</div>`;
+    }).join('');
+    const downNodes = downs.map(k => {
+      const nn = catalog[k];
+      if (!nn) return '';
+      return `<div class="lineage-node" onclick="showDetail('${k}')"><span class="arrow">→</span> ${nn.name.toLowerCase()}</div>`;
+    }).join('');
+    lineageHTML = `
+      <div class="section">
+        <div class="section-title">lineage</div>
+        <div class="lineage-box">
+          ${ups.length ? `<div class="lineage-col"><h4>upstream (${ups.length})</h4>${upNodes}</div>` : ''}
+          ${downs.length ? `<div class="lineage-col"><h4>downstream (${downs.length})</h4>${downNodes}</div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('detail').innerHTML = `
+    <div class="detail-header">
+      <div class="detail-path">
+        <span>olist</span> / <span>OLIST.${n.schema}</span> / <span>${n.name}</span>
+      </div>
+      <div class="detail-name">${n.name.toLowerCase()}</div>
+      <div class="detail-meta">
+        <span class="meta-pill ${sc}">${n.schema}</span>
+        <span class="meta-pill ${n.type === 'VIEW' ? 't-view' : 't-table'}">${n.type === 'VIEW' ? 'view' : 'table'}</span>
+        <span class="meta-pill" style="background:var(--bg3);color:var(--text2)">${n.kind}</span>
+      </div>
+    </div>
+    ${statsHTML}
+    ${lineageHTML}
+    <div class="section">
+      <div class="section-title">columns (${n.cols.length})</div>
+      <div class="table-wrap">
+        <table class="col-table">
+          <thead><tr><th>#</th><th>name</th><th>type</th></tr></thead>
+          <tbody>${colRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // scroll main to top
+  document.querySelector('.main').scrollTo(0, 0);
+}
+
+buildTree();
+</script>
+</body>
+</html>
